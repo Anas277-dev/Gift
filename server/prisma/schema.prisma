@@ -1,0 +1,207 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  CUSTOMER
+  SHOP_MANAGER
+  SUPPORT
+  SUPER_ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED
+}
+
+enum PaymentStatus {
+  PENDING
+  VERIFIED
+  FAILED
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  phone        String?
+  passwordHash String
+  role         Role       @default(CUSTOMER)
+  points       Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  addresses    Address[]
+  orders       Order[]
+  reviews      Review[]
+  wishlists    Wishlist[]
+}
+
+model Address {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label       String   @default("Home") // Home, Office, Gift Address
+  city        String
+  addressLine String
+  phone       String
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String
+  slug        String     @unique
+  description String?
+  imageUrl    String?
+  parentId    String?
+  parent      Category?  @relation("CategoryToSubcategory", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Category[] @relation("CategoryToSubcategory")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Product {
+  id                String      @id @default(uuid())
+  name              String
+  slug              String      @unique
+  description       String
+  price             Float
+  salePrice         Float?
+  sku               String      @unique
+  stock             Int         @default(50)
+  categoryId        String
+  category          Category    @relation(fields: [categoryId], references: [id])
+  images            String[]
+  deliverableCities String[]
+  isFeatured        Boolean     @default(false)
+  isActive          Boolean     @default(true)
+  ratingAverage     Float       @default(5.0)
+  reviewCount       Int         @default(0)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  orderItems        OrderItem[]
+  reviews           Review[]
+  wishlists         Wishlist[]
+}
+
+model Order {
+  id               String        @id @default(uuid())
+  orderNumber      String        @unique
+  userId           String?
+  user             User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status           OrderStatus   @default(PENDING)
+  totalAmount      Float
+  deliveryCity     String
+  deliveryAddress  String
+  recipientName    String
+  recipientPhone   String
+  giftCardMessage  String?
+  deliveryDate     String
+  deliveryTimeSlot String
+  paymentMethod    String        @default("Cash on Delivery")
+  paymentStatus    PaymentStatus @default(PENDING)
+  pointsEarned     Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  items            OrderItem[]
+  payments         Payment[]
+}
+
+model OrderItem {
+  id              String   @id @default(uuid())
+  orderId         String
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id])
+  quantity        Int
+  priceAtPurchase Float
+}
+
+model Review {
+  id         String   @id @default(uuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating     Int
+  comment    String
+  isApproved Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+model Coupon {
+  id             String       @id @default(uuid())
+  code           String       @unique
+  discountType   DiscountType @default(PERCENTAGE)
+  value          Float
+  minOrderAmount Float        @default(0)
+  expiryDate     DateTime?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+}
+
+model Wishlist {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  orderId        String
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  method         String
+  transactionRef String?
+  status         PaymentStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+}
+
+model DeliveryZone {
+  id             String   @id @default(uuid())
+  cityName       String   @unique
+  isActive       Boolean  @default(true)
+  deliveryCharge Float    @default(250)
+  createdAt      DateTime @default(now())
+}
+
+model Banner {
+  id        String   @id @default(uuid())
+  title     String
+  imageUrl  String
+  linkUrl   String?
+  position  String   @default("HERO") // HERO, MID_BANNER, SIDE
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model SiteSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+}
