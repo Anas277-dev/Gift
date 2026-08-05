@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// In production, fallback to live Vercel backend URL if VITE_API_URL env variable is omitted
+const isProduction = import.meta.env.PROD;
+const FALLBACK_API_URL = isProduction
+  ? 'https://gift-backend-three.vercel.app/api'
+  : '/api';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || FALLBACK_API_URL;
 
 const axiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -21,12 +27,12 @@ axiosInstance.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for expired tokens
+// Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => response.data,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Optional auto-logout or token refresh logic
+      // Token expired or invalid
     }
     return Promise.reject(error.response ? error.response.data : error);
   }
