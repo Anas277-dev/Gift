@@ -34,6 +34,15 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
+// Root route endpoint (prevents Vercel 404 on GET /)
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: '🚀 Gifto E-Commerce Express Server is Live on Vercel!',
+    healthCheck: '/api/health',
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
@@ -59,6 +68,10 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Gifto Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Gifto Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  });
+}
+
+module.exports = app;
